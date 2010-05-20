@@ -17,8 +17,10 @@
  * limitations under the License.
  */
 
-#import "Beacon.h"
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
+#import "Beacon.h"
 
 @implementation Beacon
 
@@ -39,15 +41,89 @@
 
 #pragma mark -
 
-- (void) signal
+- (NSString*) _systemInformationString: (NSString*) name
 {
-	if (_connection == nil)
+	char buffer[1024];
+	size_t length = 1024;
+
+	if (sysctlbyname([name cStringUsingEncoding: NSASCIIStringEncoding], buffer, &length, NULL, 0) == 0) {
+		return [NSString stringWithCString: buffer encoding: NSASCIIStringEncoding];
+	}
+
+	return nil;
+}
+
+- (BOOL) _deviceJailbroken
+{
+	return [[NSFileManager defaultManager] fileExistsAtPath: @"/Applications/Cydia.app"]
+		|| [[NSFileManager defaultManager] fileExistsAtPath: @"/private/var/lib/apt"];
+}
+
+- (NSDictionary*) _applicationInformation
+{
+	NSMutableDictionary* applicationInformation = [NSMutableDictionary dictionary];
+	if (applicationInformation != nil)
 	{
 		NSDictionary* info = [[NSBundle mainBundle] infoDictionary];
-		NSString* queryString = [NSString stringWithFormat: @"?deviceId=%@&applicationVersion=%@&applicationIdentifier=%@",
-			[[UIDevice currentDevice] uniqueIdentifier], [info objectForKey: @"CFBundleVersion"], [info objectForKey: @"CFBundleIdentifier"]];
+		if (info != nil)
+		{
+			[applicationInformation setObject: [info objectForKey: @"CFBundleIdentifier"] forKey: @"applicationIdentifier"];
+			[applicationInformation setObject: [info objectForKey: @"CFBundleVersion"] forKey: @"applicationVersion"];
+		}
+	}
+	
+	return applicationInformation;
+}
+
+- (NSDictionary*) _deviceInformation
+{
+	NSMutableDictionary* deviceInformation = [NSMutableDictionary dictionary];
+	if (deviceInformation != nil)
+	{
+		[deviceInformation setObject: [[UIDevice currentDevice] uniqueIdentifier] forKey: @"deviceIdentifier"];
+		[deviceInformation setObject: [[UIDevice currentDevice] model] forKey: @"deviceModel"];
+		[deviceInformation setObject: [[UIDevice currentDevice] systemVersion] forKey: @"deviceSystemVersion"];
+		[deviceInformation setObject: [NSNumber numberWithBool: [self _deviceJailbroken]] forKey: @"deviceJailbroken"];
+		
+		[deviceInformation setObject: [self _systemInformationString: @"hw.machine"] forKey: @"hardwareMachine"];
+		[deviceInformation setObject: [self _systemInformationString: @"hw.model"] forKey: @"hardwareModel"];
+	}
+
+	return deviceInformation;
+}
+
+#pragma mark -
+
+- (NSString*) _formEncodeString: (NSString*) string
+{
+	NSString* encoded = (NSString*) CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+		(CFStringRef) string, NULL, CFSTR("!*'();:@&=+$,/?%#[]"), kCFStringEncodingUTF8);
+	return [encoded autorelease];
+}
+
+#pragma mark -
+
+- (void) signal
+{
+	// TODO: Skip completely when running on the simulator
+
+	if (_connection == nil)
+	{
+		NSMutableString* query = [NSMutableString stringWithString: @"?"];
+		
+		NSMutableDictionary* parameters = [NSMutableDictionary dictionary];
+		[parameters addEntriesFromDictionary: [self _applicationInformation]];
+		[parameters addEntriesFromDictionary: [self _deviceInformation]];
+		
+		for (NSString* key in [parameters keyEnumerator]) {
+			if ([query length] > 1) {
+				[query appendString: @"&"];
+			}
+			[query appendFormat: @"%@=%@", key, [self _formEncodeString: [[parameters objectForKey: key] description]]];
+		}
+			
 		_connection = [[NSURLConnection connectionWithRequest:
-			[NSURLRequest requestWithURL: [NSURL URLWithString: queryString relativeToURL: _url]]
+			[NSURLRequest requestWithURL: [NSURL URLWithString: query relativeToURL: _url]]
 				delegate: self] retain];
 	}
 }
