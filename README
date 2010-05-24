@@ -1,6 +1,17 @@
 I'm using this Beacon class to keep track of people who beta-test my iPhone and iPad applications.
 
-The Beacon class simply calls a URL, sending some device and application information to the server.
+The Beacon class simply calls a URL, sending some device and application information to the server. The following information is collected:
+
+  createDate            date of the request
+  ip                    ip address of the device
+  deviceJailbroken      whether the device is jailbroken
+  deviceIdentifier      unique id of of the device (UDID)
+  deviceModel           model of the device ('iPod touch')
+  deviceSystemVersion   operating system version (3.1.3)
+  applicationVersion    application version taken from the Info.plist
+  applicationIdentifier pplication identifier taken from the Info.plist
+  hardwareMachine       hardware machine (N72AP)
+  hardwareModel         hardware model code (iPod2,1)
 
 The server side is a minimal PHP script that simply stores these values in a MySQL database. Both the PHP script and the MySQL script are included.
 
