@@ -1,0 +1,16 @@
+I'm using this Beacon class to keep track of people who beta-test my iPhone and iPad applications.
+
+The Beacon class simply calls a URL, sending some device and application information to the server.
+
+The server side is a minimal PHP script that simply stores these values in a MySQL database. Both the PHP script and the MySQL script are included.
+
+Example usage:
+
+   Beacon* beacon = [[[Beacon alloc] initWithURL:
+      [NSURL URLWithString: @"http://some.server.com/beacon.php"]] autorelease];
+   if (beacon != nil) {
+      [beacon signal];
+   }
+
+(The Beacon is retained by the NSURLConnection, so it is ok to keep it autoreleased, it will be dealloc'ed automatically when the connection is done.)
+
