@@ -105,7 +105,6 @@
 
 - (void) signal
 {
-#if !defined(TARGET_IPHONE_SIMULATOR)
 	if (_connection == nil)
 	{
 		NSMutableString* query = [NSMutableString stringWithString: @"?"];
@@ -125,7 +124,6 @@
 			[NSURLRequest requestWithURL: [NSURL URLWithString: query relativeToURL: _url]]
 				delegate: self] retain];
 	}
-#endif
 }
 
 #pragma mark -
