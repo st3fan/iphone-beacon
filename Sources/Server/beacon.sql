@@ -13,3 +13,12 @@ create table if not exists signals (
   hardwareMachine       varchar(32) not null,
   hardwareModel         varchar(32) not null
 );
+
+create table if not exists devices (
+  id                    varchar(40) not null unique primary key,
+  description           varchar(255) not null
+);
+
+select signals.*,devices.description as deviceDescription
+	from signals
+		left join (devices) on (signals.deviceIdentifier = devices.id);
